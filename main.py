@@ -1,806 +1,556 @@
 
 import random
-import datetime
+import datetime as dt
 from zoneinfo import ZoneInfo
 
-import requests
 import pandas as pd
 import plotly.express as px
+import requests
 import streamlit as st
 
-
-# =========================
-# 기본 설정
-# =========================
 st.set_page_config(
-    page_title="Pastel Movie 🍿",
+    page_title="Pastel Movie — 오늘의 영화 발견",
     page_icon="🎬",
     layout="wide",
-)
-
-API_URL = (
-    "https://www.kobis.or.kr/kobisopenapi/"
-    "webservice/rest/boxoffice/"
-    "searchDailyBoxOfficeList.json"
+    initial_sidebar_state="collapsed",
 )
 
 KST = ZoneInfo("Asia/Seoul")
-TODAY = datetime.datetime.now(KST).date()
-YESTERDAY = TODAY - datetime.timedelta(days=1)
-
-st.markdown(
-    """
-    <style>
-    @import url('https://fonts.googleapis.com/css2?family=Jua&family=Noto+Sans+KR:wght@400;500;700&display=swap');
-
-    html, body, [class*="css"] {
-        font-family: 'Noto Sans KR', sans-serif;
-    }
-
-    .stApp {
-        background: linear-gradient(135deg, #fbf5ff 0%, #fff8fb 50%, #eff8ff 100%);
-    }
-
-    h1, h2, h3 {
-        color: #514778;
-        font-family: 'Jua', sans-serif;
-    }
-
-    .soft-card {
-        background: rgba(255,255,255,0.88);
-        border: 1px solid #eee2ff;
-        border-radius: 22px;
-        padding: 22px;
-        box-shadow: 0 8px 24px rgba(100,80,140,0.08);
-        margin-bottom: 14px;
-    }
-
-    .hero {
-        background: linear-gradient(120deg, #e9ddff, #ffe6f0, #e1f3ff);
-        border-radius: 26px;
-        padding: 26px;
-        color: #514778;
-        box-shadow: 0 8px 24px rgba(100,80,140,0.09);
-        margin-bottom: 18px;
-    }
-
-    .ticket {
-        background: #fff;
-        border: 2px dashed #c8b7f4;
-        border-radius: 22px;
-        padding: 24px;
-        text-align: center;
-        box-shadow: 0 8px 20px rgba(100,80,140,0.08);
-    }
-
-    .stButton > button {
-        border-radius: 14px;
-        border: 1px solid #e3d5ff;
-        background: linear-gradient(100deg, #efe8ff, #ffeaf3);
-        color: #65518f;
-        font-weight: 600;
-        min-height: 42px;
-        transition: transform 0.15s ease;
-    }
-
-    .stButton > button:hover {
-        border-color: #c8b5ff;
-        color: #514078;
-        transform: translateY(-2px);
-    }
-
-    .stProgress > div > div > div > div {
-        background: linear-gradient(90deg, #b6a0ff, #ffb6d3);
-    }
-
-    .stAlert {
-        border-radius: 14px;
-    }
-
-    .stTabs [data-baseweb="tab"] {
-        font-weight: 600;
-    }
-
-    .stMetric {
-        background: rgba(255,255,255,0.8);
-        border: 1px solid #eee2ff;
-        padding: 14px;
-        border-radius: 18px;
-    }
-    </style>
-    """,
-    unsafe_allow_html=True,
+YESTERDAY = dt.datetime.now(KST).date() - dt.timedelta(days=1)
+API_URL = (
+    "https://www.kobis.or.kr/kobisopenapi/webservice/rest/"
+    "boxoffice/searchDailyBoxOfficeList.json"
 )
 
+STICKERS = [
+    {"id": "first_movie", "emoji": "🎬", "name": "첫 장면", "desc": "영화 한 편 발견", "goal": "영화 1편 발견"},
+    {"id": "collector_3", "emoji": "🍿", "name": "팝콘 수집가", "desc": "서로 다른 영화 3편 발견", "goal": "영화 3편 발견"},
+    {"id": "collector_5", "emoji": "🎟️", "name": "티켓 컬렉터", "desc": "서로 다른 영화 5편 발견", "goal": "영화 5편 발견"},
+    {"id": "collector_10", "emoji": "💎", "name": "시네마 보석", "desc": "서로 다른 영화 10편 발견", "goal": "영화 10편 발견"},
+    {"id": "quiz_first", "emoji": "🔍", "name": "순위 탐정", "desc": "퀴즈 첫 정답", "goal": "퀴즈 정답 1회"},
+    {"id": "quiz_5", "emoji": "🏆", "name": "퀴즈 챔피언", "desc": "퀴즈 정답 5회", "goal": "퀴즈 정답 5회"},
+    {"id": "streak_3", "emoji": "🔥", "name": "연속 정답왕", "desc": "3문제 연속 정답", "goal": "3연속 정답"},
+    {"id": "explorer_5", "emoji": "🧭", "name": "영화 탐험가", "desc": "랜덤 영화 5회 뽑기", "goal": "랜덤 탐험 5회"},
+]
 
-# =========================
-# 세션 상태
-# =========================
-defaults = {
-    "page": "home",
-    "random_movie": None,
+DEFAULT_PROFILE = {
     "found_movies": [],
     "stickers": [],
-    "quiz_movie": None,
-    "quiz_answered": False,
     "quiz_score": 0,
     "quiz_total": 0,
     "quiz_streak": 0,
     "best_streak": 0,
-    "quiz_message": "",
-    "quiz_correct": False,
-    "quiz_date": None,
     "explore_count": 0,
-    "quiz_history": [],
 }
 
-for key, value in defaults.items():
+st.markdown("""
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Jua&family=Noto+Sans+KR:wght@400;500;600;700&display=swap');
+html, body, [class*="css"] {font-family:'Noto Sans KR',sans-serif;}
+.stApp {background:linear-gradient(150deg,#fbf8ff,#fff9fc 48%,#f4faff);color:#342d50;}
+#MainMenu,footer {visibility:hidden;}
+header[data-testid="stHeader"] {background:transparent;}
+.block-container {max-width:1240px;padding-top:1.25rem;padding-bottom:3rem;}
+h1,h2,h3 {font-family:'Jua','Noto Sans KR',sans-serif;color:#342d50;}
+.brand {font-family:'Jua',sans-serif;font-size:1.5rem;color:#514675;}
+.hero {border:1px solid white;border-radius:26px;padding:28px;background:linear-gradient(115deg,#e9e0ff,#fce7f2 52%,#e2f3ff);box-shadow:0 14px 38px #6c5b8e12;margin:12px 0 22px;}
+.hero p {color:#6e638b;}
+.surface {background:#ffffffdf;border:1px solid #eee7f8;border-radius:22px;padding:20px;box-shadow:0 8px 25px #75658c0b;}
+.movie-feature {background:linear-gradient(125deg,#f0e9ff,#fff0f6 58%,#e9f7ff);border-radius:26px;padding:26px;border:1px solid white;box-shadow:0 12px 32px #75658c12;}
+.rank-pill {display:inline-block;border-radius:999px;padding:6px 12px;background:#ffffffc9;color:#7865a9;font-size:.78rem;font-weight:700;}
+.stat {background:white;border:1px solid #eee7f8;border-radius:18px;padding:15px 17px;}
+.stButton>button {border:1px solid #e4d9f7;border-radius:13px;color:#5e5083;background:linear-gradient(105deg,#eee7ff,#ffeaf3);font-weight:600;min-height:43px;transition:transform .15s ease;}
+.stButton>button:hover {border-color:#cbb9f4;color:#493b70;transform:translateY(-1px);}
+.stTextInput input,.stSelectbox div[data-baseweb="select"]>div,.stDateInput input {border-radius:12px!important;border-color:#e8e0f4!important;}
+div[data-testid="stMetric"] {background:#ffffffc9;border:1px solid #eee7f8;border-radius:17px;padding:13px 16px;}
+.stProgress>div>div>div>div {background:linear-gradient(90deg,#b7a2ff,#f5b8d2,#a9ddff);}
+.stPlotlyChart {background:#ffffffad;border:1px solid #eee7f8;border-radius:20px;padding:8px;}
+</style>
+""", unsafe_allow_html=True)
+
+for key, value in {
+    "page": "home",
+    "loaded_date": None,
+    "current_df": None,
+    "current_error": None,
+    "profile": DEFAULT_PROFILE.copy(),
+    "quiz_movie": None,
+    "quiz_answered": False,
+    "quiz_feedback": None,
+    "random_movie": None,
+}.items():
     if key not in st.session_state:
         st.session_state[key] = value
 
 
-# =========================
-# API 및 데이터
-# =========================
-@st.cache_data(ttl=1800, show_spinner=False)
-def get_movies(date_string):
-    try:
-        api_key = st.secrets["KOBIS_KEY"]
-    except Exception:
-        return None, "Streamlit Secrets에 KOBIS_KEY를 등록해 주세요."
+def supabase_configured():
+    return all(st.secrets.get(k, "") for k in (
+        "SUPABASE_URL", "SUPABASE_KEY", "PROFILE_ID"
+    ))
 
+
+def load_profile():
+    if not supabase_configured():
+        return DEFAULT_PROFILE.copy()
+    base = str(st.secrets["SUPABASE_URL"]).rstrip("/")
+    key = st.secrets["SUPABASE_KEY"]
+    profile_id = str(st.secrets["PROFILE_ID"])
+    table = st.secrets.get("SUPABASE_TABLE", "movie_profiles")
     try:
-        response = requests.get(
-            API_URL,
-            params={
-                "key": api_key,
-                "targetDt": date_string,
+        r = requests.get(
+            f"{base}/rest/v1/{table}",
+            params={"profile_id": f"eq.{profile_id}", "select": "profile_id,data"},
+            headers={"apikey": key, "Authorization": f"Bearer {key}"},
+            timeout=10,
+        )
+        r.raise_for_status()
+        rows = r.json()
+        if rows:
+            profile = DEFAULT_PROFILE.copy()
+            profile.update(rows[0].get("data") or {})
+            return profile
+    except (requests.RequestException, ValueError, TypeError):
+        pass
+    return DEFAULT_PROFILE.copy()
+
+
+def save_profile():
+    if not supabase_configured():
+        return
+    base = str(st.secrets["SUPABASE_URL"]).rstrip("/")
+    key = st.secrets["SUPABASE_KEY"]
+    table = st.secrets.get("SUPABASE_TABLE", "movie_profiles")
+    try:
+        requests.post(
+            f"{base}/rest/v1/{table}",
+            params={"on_conflict": "profile_id"},
+            headers={
+                "apikey": key,
+                "Authorization": f"Bearer {key}",
+                "Content-Type": "application/json",
+                "Prefer": "resolution=merge-duplicates,return=minimal",
             },
-            timeout=15,
-        )
-        response.raise_for_status()
-        result = response.json()
-
-        if "faultInfo" in result:
-            message = result["faultInfo"].get(
-                "message", "KOBIS API 오류"
-            )
-            return None, message
-
-        items = result.get("boxOfficeResult", {}).get(
-            "dailyBoxOfficeList", []
-        )
-
-        if not items:
-            return pd.DataFrame(), None
-
-        df = pd.DataFrame(items)
-
-        numeric_columns = [
-            "rank", "rankInten", "audiCnt", "audiAcc",
-            "scrnCnt", "showCnt",
-        ]
-
-        for column in numeric_columns:
-            if column in df.columns:
-                df[column] = pd.to_numeric(
-                    df[column], errors="coerce"
-                ).fillna(0).astype(int)
-
-        for column in ["movieNm", "movieCd", "openDt"]:
-            if column not in df.columns:
-                df[column] = ""
-
-        return df, None
-
-    except requests.exceptions.Timeout:
-        return None, "서버 응답 시간이 초과됐어요. 잠시 후 다시 시도해 주세요."
-    except requests.exceptions.RequestException:
-        return None, "네트워크 연결을 확인하고 다시 시도해 주세요."
-    except ValueError:
-        return None, "서버에서 올바른 데이터를 받지 못했어요."
+            json={
+                "profile_id": str(st.secrets["PROFILE_ID"]),
+                "data": st.session_state.profile,
+            },
+            timeout=10,
+        ).raise_for_status()
+    except requests.RequestException:
+        st.warning("기록을 저장하지 못했어요. Supabase 설정을 확인해 주세요.")
 
 
-def get_movie_key(movie):
-    """영화별로 중복 없이 기록하기 위한 식별자."""
-    code = str(movie.get("movieCd", "")).strip()
-    if code and code.lower() != "nan":
-        return code
-    return str(movie.get("movieNm", "")).strip()
+if "profile_loaded" not in st.session_state:
+    st.session_state.profile = load_profile()
+    st.session_state.profile_loaded = True
 
 
-def add_movie_to_collection(movie):
-    key = get_movie_key(movie)
-    if key and key not in st.session_state.found_movies:
-        st.session_state.found_movies.append(key)
+def persist():
+    save_profile()
 
 
-def unlock_sticker(sticker_id):
-    if sticker_id not in st.session_state.stickers:
-        st.session_state.stickers.append(sticker_id)
+def unlock(sticker_id):
+    p = st.session_state.profile
+    if sticker_id not in p["stickers"]:
+        p["stickers"].append(sticker_id)
+        persist()
         st.session_state.new_sticker = sticker_id
 
 
-def update_achievements():
-    count = len(st.session_state.found_movies)
-    score = st.session_state.quiz_score
-    streak = st.session_state.best_streak
-
-    if count >= 1:
-        unlock_sticker("first_movie")
-    if count >= 3:
-        unlock_sticker("collector_3")
-    if count >= 5:
-        unlock_sticker("collector_5")
-    if count >= 10:
-        unlock_sticker("collector_10")
-    if score >= 1:
-        unlock_sticker("quiz_first")
-    if score >= 5:
-        unlock_sticker("quiz_5")
-    if streak >= 3:
-        unlock_sticker("streak_3")
-    if st.session_state.explore_count >= 5:
-        unlock_sticker("explorer_5")
+def check_achievements():
+    p = st.session_state.profile
+    checks = [
+        (len(p["found_movies"]) >= 1, "first_movie"),
+        (len(p["found_movies"]) >= 3, "collector_3"),
+        (len(p["found_movies"]) >= 5, "collector_5"),
+        (len(p["found_movies"]) >= 10, "collector_10"),
+        (p["quiz_score"] >= 1, "quiz_first"),
+        (p["quiz_score"] >= 5, "quiz_5"),
+        (p["best_streak"] >= 3, "streak_3"),
+        (p["explore_count"] >= 5, "explorer_5"),
+    ]
+    for condition, sticker_id in checks:
+        if condition:
+            unlock(sticker_id)
 
 
-STICKER_LIST = [
-    {
-        "id": "first_movie",
-        "emoji": "🎬",
-        "name": "첫 영화 발견",
-        "description": "영화 한 편을 찾아보세요.",
-        "goal": "영화 1편 발견",
-    },
-    {
-        "id": "collector_3",
-        "emoji": "🍿",
-        "name": "영화 새싹",
-        "description": "서로 다른 영화 3편을 발견하세요.",
-        "goal": "영화 3편 발견",
-    },
-    {
-        "id": "collector_5",
-        "emoji": "🎟️",
-        "name": "티켓 수집가",
-        "description": "서로 다른 영화 5편을 발견하세요.",
-        "goal": "영화 5편 발견",
-    },
-    {
-        "id": "collector_10",
-        "emoji": "💎",
-        "name": "영화 보석 사냥꾼",
-        "description": "서로 다른 영화 10편을 발견하세요.",
-        "goal": "영화 10편 발견",
-    },
-    {
-        "id": "quiz_first",
-        "emoji": "🔍",
-        "name": "순위 탐정",
-        "description": "순위 퀴즈에서 첫 정답을 맞히세요.",
-        "goal": "퀴즈 정답 1회",
-    },
-    {
-        "id": "quiz_5",
-        "emoji": "🏆",
-        "name": "퀴즈 챔피언",
-        "description": "순위 퀴즈 정답을 5회 맞히세요.",
-        "goal": "퀴즈 정답 5회",
-    },
-    {
-        "id": "streak_3",
-        "emoji": "🔥",
-        "name": "연속 정답왕",
-        "description": "퀴즈에서 3문제 연속 정답을 맞히세요.",
-        "goal": "3연속 정답",
-    },
-    {
-        "id": "explorer_5",
-        "emoji": "🧭",
-        "name": "영화 탐험가",
-        "description": "랜덤 영화 뽑기를 5회 이용하세요.",
-        "goal": "랜덤 탐험 5회",
-    },
-]
+def add_movie(movie):
+    code = str(movie.get("movieCd", "")).strip()
+    if not code or code.lower() == "nan":
+        code = str(movie.get("movieNm", "")).strip()
+    p = st.session_state.profile
+    if code and code not in p["found_movies"]:
+        p["found_movies"].append(code)
+        persist()
+    check_achievements()
 
 
-# =========================
-# 공통 화면 이동
-# =========================
-def go_home():
-    st.session_state.page = "home"
-    st.session_state.quiz_answered = False
-    st.session_state.quiz_message = ""
-
-
-def go_quiz():
-    st.session_state.page = "quiz"
-    st.session_state.quiz_movie = None
-    st.session_state.quiz_answered = False
-    st.session_state.quiz_message = ""
-
-
-def go_stickers():
-    st.session_state.page = "stickers"
-
-
-# =========================
-# 제목
-# =========================
-def show_header():
-    st.markdown(
-        """
-        <div class="hero">
-            <h1>🎬 Pastel Movie</h1>
-            <p>오늘의 영화 순위를 탐험하고 나만의 스티커를 모아 봐요!</p>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-
-
-# =========================
-# 스티커 도감
-# =========================
-def show_stickers():
-    st.markdown("## 🌟 나의 영화 스티커 도감")
-    st.caption("미션을 수행하고 잠긴 스티커를 하나씩 해금해 보세요!")
-
-    update_achievements()
-
-    unlocked = len(st.session_state.stickers)
-    total = len(STICKER_LIST)
-
-    st.progress(unlocked / total if total else 0)
-    st.write(f"**스티커 {unlocked} / {total}개 획득**")
-
-    columns = st.columns(4)
-
-    for index, sticker in enumerate(STICKER_LIST):
-        earned = sticker["id"] in st.session_state.stickers
-
-        with columns[index % 4]:
-            emoji = sticker["emoji"] if earned else "🔒"
-            title = sticker["name"] if earned else "???"
-
-            st.markdown(
-                f"""
-                <div class="soft-card" style="text-align:center; min-height:210px;">
-                    <div style="font-size:42px;">{emoji}</div>
-                    <h3>{title}</h3>
-                    <p style="font-size:13px;">{sticker["description"]}</p>
-                    <p style="font-size:12px; color:#8b7da8;">
-                        {"✨ 획득 완료!" if earned else "🎯 미션: " + sticker["goal"]}
-                    </p>
-                </div>
-                """,
-                unsafe_allow_html=True,
-            )
-
-    st.markdown("### 🎯 다음 도전")
-    remaining = [s for s in STICKER_LIST if s["id"] not in st.session_state.stickers]
-
-    if remaining:
-        next_sticker = remaining[0]
-        st.info(
-            f"{next_sticker['emoji']} **{next_sticker['name']}** — "
-            f"{next_sticker['goal']}"
+@st.cache_data(ttl=1800, show_spinner=False)
+def fetch_boxoffice(date_string):
+    try:
+        api_key = st.secrets["KOBIS_KEY"]
+    except Exception:
+        return None, "KOBIS_KEY가 Streamlit Secrets에 등록되어 있지 않습니다."
+    try:
+        response = requests.get(
+            API_URL,
+            params={"key": api_key, "targetDt": date_string},
+            timeout=15,
         )
-    else:
-        st.success("모든 스티커를 모았어요! 진정한 영화 마스터예요. 🎉")
-
-    if st.button("🏠 메인 화면으로 돌아가기", use_container_width=True):
-        go_home()
-        st.rerun()
-
-
-# =========================
-# 퀴즈 문제 생성
-# =========================
-def create_quiz(df, date_string):
-    if df is None or df.empty or len(df) < 2:
-        st.warning("이 날짜에는 퀴즈를 만들 만큼 영화 데이터가 없어요.")
-        return
-
-    movie = random.choice(df.to_dict("records"))
-
-    st.session_state.quiz_movie = movie
-    st.session_state.quiz_date = date_string
-    st.session_state.quiz_answered = False
-    st.session_state.quiz_message = ""
-    st.session_state.quiz_correct = False
-
-
-# =========================
-# 퀴즈 전용 페이지
-# =========================
-def show_quiz(df, date_string):
-    st.markdown("## 🧩 두뇌 풀가동! 영화 순위 퀴즈")
-    st.caption("영화 제목을 보고 그날의 순위를 맞혀 보세요.")
-
-    if st.button("← 메인 화면으로 돌아가기"):
-        go_home()
-        st.rerun()
-
-    if df is None or df.empty:
-        st.warning("선택한 날짜에는 아직 집계된 영화 순위가 없어요.")
-        return
-
-    if len(df) < 2:
-        st.warning("퀴즈를 만들기에는 영화 데이터가 부족해요.")
-        return
-
-    # 날짜가 바뀌면 이전 문제를 초기화
-    if st.session_state.quiz_date != date_string:
-        st.session_state.quiz_movie = None
-        st.session_state.quiz_answered = False
-
-    if st.session_state.quiz_movie is None:
-        st.markdown(
-            """
-            <div class="soft-card" style="text-align:center;">
-                <div style="font-size:48px;">🕵️</div>
-                <h3>순위 탐정단</h3>
-                <p>영화 제목만 보고 순위를 추리해 보세요!</p>
-                <p>메인 화면의 순위표는 이 페이지에 표시되지 않아요.</p>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-
-        if st.button("🧩 새 퀴즈 시작하기", use_container_width=True):
-            create_quiz(df, date_string)
-            st.rerun()
-        return
-
-    movie = st.session_state.quiz_movie
-
-    st.markdown(
-        f"""
-        <div class="hero">
-            <div>🔎 MYSTERY RANK</div>
-            <h1>{movie.get("movieNm", "이름 없는 영화")}</h1>
-            <p>{date_string[:4]}년 {date_string[4:6]}월 {date_string[6:]}일에 몇 위였을까요?</p>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-
-    if not st.session_state.quiz_answered:
-        guessed_rank = st.selectbox(
-            "내가 생각하는 순위",
-            options=list(range(1, len(df) + 1)),
-            format_func=lambda x: f"{x}위",
-            key=f"guess_{date_string}_{get_movie_key(movie)}",
-        )
-
-        if st.button("정답 확인하기 ✨", use_container_width=True):
-            actual_rank = int(movie.get("rank", 0))
-            correct = guessed_rank == actual_rank
-
-            st.session_state.quiz_answered = True
-            st.session_state.quiz_correct = correct
-            st.session_state.quiz_total += 1
-
-            if correct:
-                st.session_state.quiz_score += 1
-                st.session_state.quiz_streak += 1
-                st.session_state.best_streak = max(
-                    st.session_state.best_streak,
-                    st.session_state.quiz_streak,
-                )
-                st.session_state.quiz_message = (
-                    f"🎉 정답이에요! {actual_rank}위가 맞아요!"
-                )
-                unlock_sticker("quiz_first")
-                if st.session_state.quiz_score >= 5:
-                    unlock_sticker("quiz_5")
-                if st.session_state.quiz_streak >= 3:
-                    unlock_sticker("streak_3")
-            else:
-                st.session_state.quiz_streak = 0
-                st.session_state.quiz_message = (
-                    f"아쉽지만 정답은 {actual_rank}위예요! "
-                    "다음 퀴즈에 다시 도전해 봐요."
-                )
-
-            st.rerun()
-
-    else:
-        if st.session_state.quiz_correct:
-            st.success(st.session_state.quiz_message)
-            st.balloons()
-        else:
-            st.info(st.session_state.quiz_message)
-
-        st.markdown(
-            f"""
-            <div class="soft-card">
-                <h3>📊 정답 정보</h3>
-                <p>영화: <b>{movie.get("movieNm", "")}</b></p>
-                <p>실제 순위: <b>{movie.get("rank", "?")}위</b></p>
-                <p>당일 관객 수: <b>{int(movie.get("audiCnt", 0)):,}명</b></p>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-
-        st.metric("누적 퀴즈 정답", st.session_state.quiz_score)
-        st.metric("현재 연속 정답", st.session_state.quiz_streak)
-
-        if st.button("🎲 다음 퀴즈 풀기", use_container_width=True):
-            create_quiz(df, date_string)
-            st.rerun()
-
-    st.caption("🔐 퀴즈를 푸는 동안에는 순위표와 TOP 5 그래프를 보여 주지 않아요.")
+        response.raise_for_status()
+        payload = response.json()
+        if "faultInfo" in payload:
+            return None, payload["faultInfo"].get("message", "KOBIS API 오류")
+        rows = payload.get("boxOfficeResult", {}).get("dailyBoxOfficeList", [])
+        if not rows:
+            return pd.DataFrame(), None
+        df = pd.DataFrame(rows)
+        for col in ["rank", "rankInten", "audiCnt", "audiAcc", "scrnCnt", "showCnt"]:
+            if col not in df.columns:
+                df[col] = 0
+            df[col] = pd.to_numeric(df[col], errors="coerce").fillna(0).astype(int)
+        for col in ["movieNm", "movieCd", "openDt"]:
+            if col not in df.columns:
+                df[col] = ""
+        return df, None
+    except requests.Timeout:
+        return None, "KOBIS 서버 응답 시간이 초과됐습니다."
+    except requests.RequestException:
+        return None, "네트워크 연결을 확인해 주세요."
+    except (ValueError, TypeError):
+        return None, "KOBIS에서 읽을 수 없는 응답을 받았습니다."
 
 
-# =========================
-# 메인 페이지
-# =========================
-def show_home(df, date_string, error):
-    show_header()
-
-    st.markdown("### 📅 오늘의 영화 탐험 날짜")
-
-    selected_date = st.date_input(
-        "날짜 선택",
-        value=datetime.datetime.strptime(date_string, "%Y%m%d").date(),
-        min_value=datetime.date(2004, 1, 1),
-        max_value=YESTERDAY,
-        help="박스오피스는 집계가 완료된 날짜를 기준으로 확인해요.",
-    )
-
-    date_string = selected_date.strftime("%Y%m%d")
-
-    # 날짜가 바뀌면 데이터를 다시 조회
-    df, error = get_movies.clear() or (df, error) if False else (df, error)
-
-    if st.session_state.get("loaded_date") != date_string:
-        df, error = get_movies(date_string)
+def load_date_data(date_string, force=False):
+    if force or st.session_state.loaded_date != date_string:
+        df, error = fetch_boxoffice(date_string)
         st.session_state.loaded_date = date_string
         st.session_state.current_df = df
         st.session_state.current_error = error
         st.session_state.quiz_movie = None
-        st.session_state.quiz_date = date_string
-    else:
-        df = st.session_state.get("current_df", df)
-        error = st.session_state.get("current_error", error)
+        st.session_state.quiz_answered = False
+        st.session_state.quiz_feedback = None
+    return st.session_state.current_df, st.session_state.current_error
 
-    st.markdown("---")
 
-    nav1, nav2, nav3 = st.columns(3)
+def format_num(value):
+    try:
+        return f"{int(value):,}"
+    except (ValueError, TypeError):
+        return "0"
 
-    with nav1:
-        if st.button("🧩 순위 퀴즈 입장", use_container_width=True):
-            go_quiz()
-            st.rerun()
 
-    with nav2:
-        if st.button("🌟 나의 스티커 도감", use_container_width=True):
-            go_stickers()
-            st.rerun()
-
-    with nav3:
-        if st.button("🎲 랜덤 영화 뽑기", use_container_width=True):
-            if df is not None and not df.empty:
-                st.session_state.random_movie = random.choice(
-                    df.to_dict("records")
-                )
-                st.session_state.explore_count += 1
-                update_achievements()
+def brand_header(active):
+    st.markdown('<div class="brand">🎬 PASTEL MOVIE</div><p>Find your next favorite scene.</p>', unsafe_allow_html=True)
+    nav = st.columns([1, 1, 1, 4])
+    for col, page, label in zip(nav[:3], ["home", "quiz", "stickers"], ["🏠 홈", "🧩 순위 퀴즈", "🌟 스티커 도감"]):
+        with col:
+            if st.button(label, key=f"nav_{active}_{page}", use_container_width=True):
+                st.session_state.page = page
+                if page == "quiz":
+                    st.session_state.quiz_movie = None
+                    st.session_state.quiz_answered = False
+                    st.session_state.quiz_feedback = None
                 st.rerun()
+    with nav[3]:
+        st.markdown('<div style="text-align:right;padding-top:10px;color:#8c83a1;font-size:.82rem;">DAILY BOX OFFICE · MOVIE DISCOVERY</div>', unsafe_allow_html=True)
+    st.markdown("<hr style='border:none;border-top:1px solid #eee6f7;margin-bottom:18px;'>", unsafe_allow_html=True)
+
+
+def show_new_sticker():
+    sticker_id = st.session_state.get("new_sticker")
+    if sticker_id:
+        sticker = next((s for s in STICKERS if s["id"] == sticker_id), None)
+        if sticker:
+            st.toast(f"새 스티커 획득! {sticker['emoji']} {sticker['name']}", icon="🌟")
+        st.session_state.new_sticker = None
+
+
+def render_stickers():
+    p = st.session_state.profile
+    cols = st.columns(4)
+    for i, sticker in enumerate(STICKERS):
+        earned = sticker["id"] in p["stickers"]
+        with cols[i % 4]:
+            icon = sticker["emoji"] if earned else "🔒"
+            name = sticker["name"] if earned else "미공개 스티커"
+            desc = sticker["desc"] if earned else f"미션: {sticker['goal']}"
+            st.markdown(
+                f'<div class="surface" style="text-align:center;min-height:170px;margin-bottom:12px;">'
+                f'<div style="font-size:36px;">{icon}</div><h3>{name}</h3>'
+                f'<p style="font-size:.8rem;">{desc}</p>'
+                f'<span class="rank-pill">{"✦ 획득 완료" if earned else "○ 도전 가능"}</span></div>',
+                unsafe_allow_html=True,
+            )
+
+
+def show_quiz():
+    brand_header("quiz")
+    st.markdown("""
+    <div class="hero"><div class="rank-pill">MYSTERY RANK · DAILY CHALLENGE</div>
+    <h1>두뇌 풀가동! 영화 순위 퀴즈</h1>
+    <p>영화 제목만 보고 그날의 순위를 추리해 보세요. 이 화면에는 순위표가 표시되지 않아요.</p></div>
+    """, unsafe_allow_html=True)
+
+    p = st.session_state.profile
+    a, b, c = st.columns(3)
+    a.metric("누적 정답", f"{p['quiz_score']}개")
+    b.metric("정답률", f"{p['quiz_score'] / p['quiz_total'] * 100:.0f}%" if p["quiz_total"] else "—")
+    c.metric("최고 연속 정답", f"{p['best_streak']}문제")
+
+    df = st.session_state.current_df
+    error = st.session_state.current_error
+    date_string = st.session_state.loaded_date
+    if error:
+        st.error(error)
+        return
+    if df is None or df.empty:
+        st.warning("📅 그날은 아직 집계 전입니다. 홈에서 다른 날짜를 선택해 주세요.")
+        if st.button("홈으로 돌아가기"):
+            st.session_state.page = "home"
+            st.rerun()
+        return
+    if len(df) < 2:
+        st.info("퀴즈에 사용할 영화가 부족해요.")
+        return
+
+    if st.session_state.quiz_movie is None:
+        st.markdown('<div class="surface" style="text-align:center;"><div style="font-size:50px;">🕵️</div><h2>오늘의 미스터리 영화</h2><p>새 퀴즈를 시작하면 영화 한 편이 무작위로 선택돼요.</p></div>', unsafe_allow_html=True)
+        if st.button("✨ 새 퀴즈 시작하기", use_container_width=True):
+            st.session_state.quiz_movie = random.choice(df.to_dict("records"))
+            st.session_state.quiz_answered = False
+            st.session_state.quiz_feedback = None
+            st.rerun()
+        return
+
+    movie = st.session_state.quiz_movie
+    rank = int(movie.get("rank", 0))
+    st.markdown(
+        f'<div class="movie-feature"><span class="rank-pill">🔎 MYSTERY RANK</span>'
+        f'<h1 style="margin-top:18px;">{movie.get("movieNm", "영화 제목")}</h1>'
+        f'<p>{date_string[:4]}년 {date_string[4:6]}월 {date_string[6:]}일의 순위를 맞혀 보세요.</p></div>',
+        unsafe_allow_html=True,
+    )
+
+    if not st.session_state.quiz_answered:
+        guess = st.selectbox("몇 위였을까요?", list(range(1, len(df) + 1)), format_func=lambda x: f"{x}위", key=f"guess_{date_string}_{movie.get('movieCd', movie.get('movieNm'))}")
+        if st.button("정답 확인하기 ✨", use_container_width=True):
+            correct = guess == rank
+            st.session_state.quiz_answered = True
+            st.session_state.quiz_feedback = {"correct": correct, "rank": rank}
+            p["quiz_total"] += 1
+            if correct:
+                p["quiz_score"] += 1
+                p["quiz_streak"] += 1
+                p["best_streak"] = max(p["best_streak"], p["quiz_streak"])
             else:
-                st.warning("뽑을 영화가 없어요.")
+                p["quiz_streak"] = 0
+            persist()
+            check_achievements()
+            st.rerun()
+    else:
+        feedback = st.session_state.quiz_feedback or {}
+        if feedback.get("correct"):
+            st.success(f"🎉 정답이에요! {rank}위가 맞아요.")
+            if not st.session_state.get("quiz_balloons_shown", False):
+                st.balloons()
+                st.session_state.quiz_balloons_shown = True
+        else:
+            st.info(f"아쉽지만 정답은 {rank}위예요. 다음 문제에 도전해 봐요.")
+        a, b = st.columns(2)
+        a.metric("실제 순위", f"{rank}위")
+        b.metric("당일 관객 수", f"{format_num(movie.get('audiCnt'))}명")
+        if st.button("🎲 다음 문제", use_container_width=True):
+            st.session_state.quiz_movie = random.choice(df.to_dict("records"))
+            st.session_state.quiz_answered = False
+            st.session_state.quiz_feedback = None
+            st.session_state.quiz_balloons_shown = False
+            st.rerun()
+    show_new_sticker()
+    st.caption("🔐 퀴즈가 끝날 때까지 순위표와 TOP 5 그래프는 공개되지 않습니다.")
+
+
+def show_stickers():
+    brand_header("stickers")
+    check_achievements()
+    p = st.session_state.profile
+    unlocked = len(p["stickers"])
+    st.markdown("""
+    <div class="hero"><div class="rank-pill">MY COLLECTION · ACHIEVEMENTS</div>
+    <h1>나의 영화 스티커 도감</h1><p>영화를 탐험하고 퀴즈를 풀며 나만의 컬렉션을 완성하세요.</p></div>
+    """, unsafe_allow_html=True)
+    st.markdown(f"### ✨ 스티커 {unlocked}/{len(STICKERS)}개")
+    st.progress(unlocked / len(STICKERS))
+    a, b = st.columns(2)
+    a.metric("발견한 영화", f"{len(p['found_movies'])}편")
+    b.metric("퀴즈 정답", f"{p['quiz_score']}개")
+    st.markdown("### 🏅 My sticker shelf")
+    render_stickers()
+
+    remaining = [s for s in STICKERS if s["id"] not in p["stickers"]]
+    st.markdown("### 🎯 다음 도전 미션")
+    if remaining:
+        s = remaining[0]
+        st.markdown(f'<div class="surface"><div style="font-size:30px;">{s["emoji"]}</div><h3>{s["name"]}</h3><p>{s["desc"]}</p><span class="rank-pill">미션 · {s["goal"]}</span></div>', unsafe_allow_html=True)
+    else:
+        st.success("모든 스티커를 모았어요! 시네마 마스터예요. 🌟")
+
+    a, b, c = st.columns(3)
+    a.metric("랜덤 영화 탐험", f"{p['explore_count']}회")
+    b.metric("현재 연속 정답", f"{p['quiz_streak']}문제")
+    c.metric("최고 연속 정답", f"{p['best_streak']}문제")
+    show_new_sticker()
+
+
+def show_home():
+    brand_header("home")
+    st.markdown("""
+    <div class="hero"><div class="rank-pill">YOUR DAILY CINEMA GUIDE</div>
+    <h1>오늘, 어떤 영화를 발견할까요? 🍿</h1>
+    <p>매일의 박스오피스를 살펴보고 퀴즈를 풀고 나만의 영화 컬렉션을 모아 보세요.</p></div>
+    """, unsafe_allow_html=True)
+
+    dcol, rcol, _ = st.columns([2, 1, 4])
+    with dcol:
+        selected_date = st.date_input(
+            "박스오피스 날짜",
+            value=YESTERDAY,
+            min_value=dt.date(2004, 1, 1),
+            max_value=YESTERDAY,
+            key="boxoffice_date",
+        )
+    with rcol:
+        st.markdown("<div style='height:27px'></div>", unsafe_allow_html=True)
+        refresh = st.button("↻ 새로고침", use_container_width=True)
+    date_string = selected_date.strftime("%Y%m%d")
+    df, error = load_date_data(date_string, force=refresh)
 
     if error:
         st.error(f"데이터를 불러오지 못했어요: {error}")
-        st.info("KOBIS API 키와 인터넷 연결을 확인해 주세요.")
+        st.info("Streamlit Cloud의 Settings → Secrets에서 KOBIS_KEY를 확인해 주세요.")
         return
-
     if df is None or df.empty:
         st.warning("📅 그날은 아직 집계 전입니다.")
         return
 
-    # 영화 탐험 기록
     for movie in df.to_dict("records"):
-        add_movie_to_collection(movie)
+        add_movie(movie)
+    check_achievements()
+    p = st.session_state.profile
 
-    update_achievements()
-
-    st.markdown("### 🎟️ 오늘의 영화 티켓")
-
-    first_movie = df.iloc[0].to_dict()
-
-    st.markdown(
-        f"""
-        <div class="ticket">
-            <div style="font-size:36px;">🎟️🍿🎬</div>
-            <h2>오늘의 박스오피스 1위</h2>
-            <h1>{first_movie.get("movieNm", "")}</h1>
-            <p>당일 관객 수: {int(first_movie.get("audiCnt", 0)):,}명</p>
-            <p>누적 관객 수: {int(first_movie.get("audiAcc", 0)):,}명</p>
-            <p>개봉일: {first_movie.get("openDt", "정보 없음")}</p>
-        </div>
-        """,
-        unsafe_allow_html=True,
-    )
-
-    if st.session_state.random_movie:
-        random_movie = st.session_state.random_movie
-        st.markdown("### 🎲 오늘의 랜덤 영화")
-
-        st.markdown(
-            f"""
-            <div class="soft-card">
-                <h2>✨ {random_movie.get("movieNm", "")}</h2>
-                <p>현재 순위: {random_movie.get("rank", "?")}위</p>
-                <p>당일 관객 수: {int(random_movie.get("audiCnt", 0)):,}명</p>
-            </div>
-            """,
-            unsafe_allow_html=True,
-        )
-
-        if st.button("다른 영화 뽑기"):
-            st.session_state.random_movie = random.choice(
-                df.to_dict("records")
-            )
-            st.session_state.explore_count += 1
-            update_achievements()
+    q1, q2, q3 = st.columns(3)
+    with q1:
+        st.markdown('<div class="surface"><div style="font-size:28px;">🧩</div><h3>순위 퀴즈</h3><p>영화 제목만 보고 순위를 추리해요.</p></div>', unsafe_allow_html=True)
+        if st.button("퀴즈 도전하기 →", key="home_quiz", use_container_width=True):
+            st.session_state.page = "quiz"
+            st.session_state.quiz_movie = None
+            st.session_state.quiz_answered = False
+            st.session_state.quiz_feedback = None
+            st.rerun()
+    with q2:
+        st.markdown('<div class="surface"><div style="font-size:28px;">🌟</div><h3>스티커 도감</h3><p>미션을 달성하고 스티커를 모아요.</p></div>', unsafe_allow_html=True)
+        if st.button("도감 열기 →", key="home_stickers", use_container_width=True):
+            st.session_state.page = "stickers"
+            st.rerun()
+    with q3:
+        st.markdown('<div class="surface"><div style="font-size:28px;">🎲</div><h3>랜덤 영화 발견</h3><p>오늘의 영화 중 한 편을 무작위로 골라요.</p></div>', unsafe_allow_html=True)
+        if st.button("랜덤 뽑기 →", key="home_random", use_container_width=True):
+            st.session_state.random_movie = random.choice(df.to_dict("records"))
+            p["explore_count"] += 1
+            persist()
+            check_achievements()
             st.rerun()
 
-    st.markdown("### 🔎 영화 검색")
+    if st.session_state.random_movie:
+        movie = st.session_state.random_movie
+        st.markdown("### 🎲 오늘 발견한 랜덤 영화")
+        st.markdown(f'<div class="surface"><span class="rank-pill">RANK {movie.get("rank", "?")}</span><h2>{movie.get("movieNm", "")}</h2><p>당일 관객 {format_num(movie.get("audiCnt"))}명 · 누적 관객 {format_num(movie.get("audiAcc"))}명</p></div>', unsafe_allow_html=True)
+        if st.button("다른 영화 뽑기", key="reroll_movie"):
+            st.session_state.random_movie = random.choice(df.to_dict("records"))
+            p["explore_count"] += 1
+            persist()
+            check_achievements()
+            st.rerun()
 
-    search = st.text_input(
-        "영화 제목을 입력하세요",
-        placeholder="예: 영화 제목",
-    )
+    first = df.iloc[0].to_dict()
+    st.markdown("## 🏆 오늘의 박스오피스")
+    left, right = st.columns([1.45, 1])
+    with left:
+        st.markdown(f'<div class="movie-feature" style="min-height:285px;"><span class="rank-pill">TODAY’S #1 · DAILY BOX OFFICE</span><div style="font-size:42px;margin-top:22px;">🎞️</div><h1>{first.get("movieNm", "")}</h1><p>개봉일 {first.get("openDt") or "정보 없음"}</p><p>누적 관객 수 {format_num(first.get("audiAcc"))}명</p></div>', unsafe_allow_html=True)
+    with right:
+        st.markdown("### 📊 오늘의 기록")
+        for label, value in [
+            ("1위 당일 관객 수", f"{format_num(first.get('audiCnt'))}명"),
+            ("상영 스크린 수", f"{format_num(first.get('scrnCnt'))}개"),
+            ("상영 횟수", f"{format_num(first.get('showCnt'))}회"),
+        ]:
+            st.markdown(f'<div class="stat"><span style="color:#89819b;font-size:.8rem;">{label}</span><div style="font-size:1.3rem;font-weight:700;">{value}</div></div><br>', unsafe_allow_html=True)
 
+    st.markdown("## 🔎 영화 탐색")
+    search = st.text_input("영화 제목 검색", placeholder="영화 제목을 입력하세요", key="movie_search")
     if search.strip():
-        results = df[
-            df["movieNm"].astype(str).str.contains(
-                search.strip(), case=False, na=False
-            )
-        ]
-
+        results = df[df["movieNm"].astype(str).str.contains(search.strip(), case=False, na=False)]
         if results.empty:
             st.info("검색 결과가 없어요. 다른 제목으로 검색해 보세요.")
         else:
-            for movie in results.to_dict("records"):
-                st.markdown(
-                    f"**🎬 {movie['movieNm']}** — "
-                    f"{movie['rank']}위 · "
-                    f"당일 관객 {int(movie['audiCnt']):,}명"
-                )
-                add_movie_to_collection(movie)
+            for row in results.to_dict("records"):
+                st.markdown(f'<div class="surface"><span class="rank-pill">{row.get("rank")}위</span><h3>{row.get("movieNm", "")}</h3><p>당일 관객 {format_num(row.get("audiCnt"))}명 · 누적 관객 {format_num(row.get("audiAcc"))}명</p></div><br>', unsafe_allow_html=True)
+                add_movie(row)
 
-    st.markdown("### 🏆 TOP 5 관객 수")
-
+    st.markdown("## 📈 TOP 5 관객 수")
     top5 = df.head(5).copy()
-    top5["관객 수"] = top5["audiCnt"]
-    top5["순위"] = top5["rank"].astype(str) + "위"
-
     chart = px.bar(
-        top5,
-        x="관객 수",
-        y="movieNm",
-        orientation="h",
-        color="rank",
-        color_continuous_scale=["#d8c9ff", "#f6cde0", "#b9e4ff"],
-        labels={
-            "movieNm": "영화",
-            "관객 수": "관객 수(명)",
-            "rank": "순위",
-        },
+        top5, x="audiCnt", y="movieNm", orientation="h", text="audiCnt",
+        labels={"audiCnt": "당일 관객 수(명)", "movieNm": "영화"},
+        color="rank", color_continuous_scale=["#b8a5f7", "#efc5df", "#b6e3fa"],
     )
-
+    chart.update_traces(texttemplate="%{text:,.0f}", textposition="outside", cliponaxis=False)
     chart.update_layout(
         yaxis={"categoryorder": "total ascending"},
+        xaxis={"tickformat": ",", "gridcolor": "#eee8f5"},
         plot_bgcolor="rgba(255,255,255,0)",
         paper_bgcolor="rgba(255,255,255,0)",
         coloraxis_showscale=False,
-        margin=dict(l=10, r=10, t=20, b=10),
+        margin=dict(l=10, r=45, t=15, b=10),
+        font=dict(color="#655b7b"),
     )
-
     st.plotly_chart(chart, use_container_width=True)
 
-    st.markdown("### 🎞️ 오늘의 영화 순위표")
-
-    display_df = df.copy()
-    display_df["순위 변동"] = display_df["rankInten"].apply(
-        lambda x: (
-            f"🔺 +{x}" if x > 0
-            else (f"🔻 {x}" if x < 0 else "➖ 0")
-        )
+    st.markdown("## 🎞️ 데일리 랭킹")
+    st.caption(f"{selected_date.strftime('%Y년 %m월 %d일')} 기준 · KOBIS 일별 박스오피스")
+    display = df.copy()
+    display["변동"] = display["rankInten"].apply(
+        lambda x: f"🔺 +{x}" if x > 0 else (f"🔻 {x}" if x < 0 else "➖")
     )
-
-    display_df["영화 제목"] = display_df.apply(
-        lambda row: (
-            "🏆 " if int(row.get("audiAcc", 0)) >= 1_000_000 else ""
-        ) + str(row.get("movieNm", "")),
+    display["영화"] = display.apply(
+        lambda r: ("🏆 " if int(r.get("audiAcc", 0)) >= 1_000_000 else "") + str(r.get("movieNm", "")),
         axis=1,
     )
-
-    display_df["당일 관객 수"] = display_df["audiCnt"].map(
-        lambda x: f"{x:,}명"
+    display["당일 관객"] = display["audiCnt"].map(lambda x: f"{x:,}명")
+    display["누적 관객"] = display["audiAcc"].map(lambda x: f"{x:,}명")
+    display = display[["rank", "변동", "영화", "당일 관객", "누적 관객", "openDt"]].rename(
+        columns={"rank": "순위", "openDt": "개봉일"}
     )
-    display_df["누적 관객 수"] = display_df["audiAcc"].map(
-        lambda x: f"{x:,}명"
-    )
+    st.dataframe(display, use_container_width=True, hide_index=True, height=420)
 
-    st.dataframe(
-        display_df[
-            [
-                "rank",
-                "순위 변동",
-                "영화 제목",
-                "당일 관객 수",
-                "누적 관객 수",
-                "openDt",
-            ]
-        ].rename(
-            columns={
-                "rank": "순위",
-                "openDt": "개봉일",
-            }
-        ),
-        use_container_width=True,
-        hide_index=True,
-    )
-
-    st.markdown("### 🌟 나의 도감 진행 상황")
-    st.progress(
-        len(st.session_state.stickers) / len(STICKER_LIST)
-    )
-    st.write(
-        f"스티커 {len(st.session_state.stickers)} / "
-        f"{len(STICKER_LIST)}개 · "
-        f"발견한 영화 {len(st.session_state.found_movies)}편"
-    )
-
-    if st.button("🌟 스티커 도감 자세히 보기", use_container_width=True):
-        go_stickers()
-        st.rerun()
+    st.markdown("## 🌟 나의 컬렉션")
+    st.progress(len(p["stickers"]) / len(STICKERS))
+    st.caption(f"스티커 {len(p['stickers'])}/{len(STICKERS)}개 · 발견한 영화 {len(p['found_movies'])}편 · 퀴즈 정답 {p['quiz_score']}개")
+    show_new_sticker()
 
 
-# =========================
-# 앱 실행
-# =========================
-if "loaded_date" not in st.session_state:
-    st.session_state.loaded_date = None
-    st.session_state.current_df = None
-    st.session_state.current_error = None
+def footer():
+    st.markdown("<hr><div style='text-align:center;color:#a39ab4;font-size:.78rem;padding:8px;'>PASTEL MOVIE · A little movie magic, every day ✦<br>박스오피스 데이터 제공: 영화진흥위원회(KOBIS)</div>", unsafe_allow_html=True)
 
-initial_date = YESTERDAY.strftime("%Y%m%d")
 
-# 화면을 열 때 현재 날짜에 맞는 데이터를 준비
 if st.session_state.loaded_date is None:
-    initial_df, initial_error = get_movies(initial_date)
-    st.session_state.loaded_date = initial_date
-    st.session_state.current_df = initial_df
-    st.session_state.current_error = initial_error
+    load_date_data(YESTERDAY.strftime("%Y%m%d"))
 
-page = st.session_state.page
-
-if page == "quiz":
-    quiz_date = st.session_state.get("loaded_date", initial_date)
-    quiz_df = st.session_state.get("current_df")
-    quiz_error = st.session_state.get("current_error")
-
-    if quiz_error:
-        st.error(f"데이터 오류: {quiz_error}")
-        if st.button("메인 화면으로 돌아가기"):
-            go_home()
-            st.rerun()
-    else:
-        show_quiz(quiz_df, quiz_date)
-
-elif page == "stickers":
+if st.session_state.page == "quiz":
+    show_quiz()
+elif st.session_state.page == "stickers":
     show_stickers()
-
 else:
-    show_home(
-        st.session_state.get("current_df"),
-        st.session_state.get("loaded_date", initial_date),
-        st.session_state.get("current_error"),
-    )
+    show_home()
+
+footer()
