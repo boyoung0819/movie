@@ -39,13 +39,7 @@ st.markdown(
 
     :root {
         --lavender: #8B7BE8;
-        --lavender-light: #F0ECFF;
-        --pink: #F6B9D0;
-        --blue: #B9E2F8;
-        --mint: #C7EBD9;
         --ink: #39334F;
-        --muted: #89849F;
-        --surface: #FFFFFF;
     }
 
     html, body, [class*="css"] {
@@ -69,14 +63,8 @@ st.markdown(
     h1, h2, h3 {
         color: var(--ink) !important;
         font-family: 'Jua', sans-serif !important;
-        letter-spacing: -0.4px;
     }
 
-    p, label, span {
-        color: inherit;
-    }
-
-    /* 상단 로고 */
     .brand {
         display: flex;
         align-items: center;
@@ -110,25 +98,35 @@ st.markdown(
         margin-top: 4px;
     }
 
-    /* 둥근 카드 */
-    .soft-card {
-        background: rgba(255, 255, 255, 0.83);
-        border: 1px solid rgba(255,255,255,0.95);
-        border-radius: 24px;
-        padding: 23px;
-        box-shadow:
-            8px 8px 22px rgba(111, 99, 157, 0.09),
-            -5px -5px 18px rgba(255,255,255,0.9);
+    .pill {
+        display: inline-block;
+        border-radius: 30px;
+        padding: 6px 11px;
+        font-size: 12px;
+        background: #F0ECFF;
+        color: #7664C5;
+        margin: 3px 4px 3px 0;
     }
 
-    /* 대표 영화 */
+    .section-title {
+        font-family: 'Jua', sans-serif;
+        color: #51466F;
+        font-size: 23px;
+        margin: 24px 0 5px 0;
+    }
+
+    .section-subtitle {
+        color: #928BA4;
+        font-size: 13px;
+        margin-bottom: 14px;
+    }
+
     .hero-card {
         background: linear-gradient(125deg, #E9E2FF 0%, #FBE5F0 55%, #E2F3FF 100%);
         border-radius: 28px;
         padding: 28px;
-        box-shadow:
-            9px 10px 25px rgba(118, 102, 170, 0.13),
-            -5px -5px 18px rgba(255,255,255,0.9);
+        box-shadow: 9px 10px 25px rgba(118,102,170,0.13),
+                    -5px -5px 18px rgba(255,255,255,0.9);
         margin: 8px 0 20px 0;
     }
 
@@ -159,38 +157,6 @@ st.markdown(
         line-height: 1.9;
     }
 
-    .hero-caption {
-        color: #766D8C;
-        font-size: 13px;
-        margin-top: 12px;
-    }
-
-    /* 작은 안내 태그 */
-    .pill {
-        display: inline-block;
-        border-radius: 30px;
-        padding: 6px 11px;
-        font-size: 12px;
-        background: #F0ECFF;
-        color: #7664C5;
-        margin: 3px 4px 3px 0;
-    }
-
-    /* 섹션 제목 */
-    .section-title {
-        font-family: 'Jua', sans-serif;
-        color: #51466F;
-        font-size: 23px;
-        margin: 24px 0 5px 0;
-    }
-
-    .section-subtitle {
-        color: #928BA4;
-        font-size: 13px;
-        margin-bottom: 14px;
-    }
-
-    /* 메트릭 카드 */
     div[data-testid="stMetric"] {
         background: rgba(255,255,255,0.86);
         border: 1px solid rgba(255,255,255,0.98);
@@ -210,7 +176,6 @@ st.markdown(
         font-family: 'Jua', sans-serif !important;
     }
 
-    /* 입력창 */
     div[data-baseweb="select"] > div,
     div[data-testid="stDateInput"] > div > div {
         border-radius: 14px !important;
@@ -223,14 +188,12 @@ st.markdown(
         background: rgba(255,255,255,0.9) !important;
     }
 
-    /* 표 */
     div[data-testid="stDataFrame"] {
         border: 1px solid #EEE9FA;
         border-radius: 17px;
         overflow: hidden;
     }
 
-    /* 버튼 */
     .stButton button {
         border-radius: 14px;
         border: 1px solid #E2D9FF;
@@ -239,12 +202,6 @@ st.markdown(
         font-weight: bold;
     }
 
-    .stButton button:hover {
-        border-color: #B9A9F5;
-        color: #493B8C;
-    }
-
-    /* 하단 */
     .footer {
         text-align: center;
         color: #A19AB4;
@@ -253,7 +210,6 @@ st.markdown(
         padding-top: 28px;
     }
 
-    /* 모바일 화면 */
     @media (max-width: 700px) {
         .block-container {
             padding-left: 1rem;
@@ -286,15 +242,9 @@ st.markdown(
             <div class="brand-sub">YOUR DAILY BOX OFFICE DIARY</div>
         </div>
     </div>
-    <p style="color:#9289AD; margin: 10px 0 20px 2px;">
+    <p style="color:#9289AD; margin:10px 0 20px 2px;">
         오늘은 어떤 영화가 가장 많은 사랑을 받았을까요? 🍿
     </p>
-    """,
-    unsafe_allow_html=True,
-)
-
-st.markdown(
-    """
     <div>
         <span class="pill">🎞️ DAILY RANKING</span>
         <span class="pill">💜 MOVIE DIARY</span>
@@ -307,10 +257,14 @@ st.markdown(
 
 # ==========================================
 # 4. 날짜 선택
+#    오늘은 아직 집계 전이므로 어제까지만 선택 가능
 # ==========================================
-st.markdown('<div class="section-title">🗓️ 영화 기록 날짜</div>', unsafe_allow_html=True)
 st.markdown(
-    '<div class="section-subtitle">조회하고 싶은 날짜의 박스오피스를 선택해 보세요.</div>',
+    '<div class="section-title">🗓️ 영화 기록 날짜</div>',
+    unsafe_allow_html=True,
+)
+st.markdown(
+    '<div class="section-subtitle">달력에서 조회하고 싶은 날짜를 선택하세요.</div>',
     unsafe_allow_html=True,
 )
 
@@ -340,7 +294,9 @@ with info_col:
             <span style="font-size:21px;color:#4D426E;font-weight:bold;">
                 {selected_date.strftime("%Y년 %m월 %d일")}
             </span><br>
-            <span style="font-size:12px;">한국 영화진흥위원회(KOBIS) 일별 박스오피스 기준</span>
+            <span style="font-size:12px;">
+                오늘 기준 어제까지 조회할 수 있어요.
+            </span>
         </div>
         """,
         unsafe_allow_html=True,
@@ -348,11 +304,10 @@ with info_col:
 
 
 # ==========================================
-# 5. API에서 박스오피스 데이터 가져오기
+# 5. KOBIS API에서 데이터 가져오기
 # ==========================================
 @st.cache_data(ttl=3600, show_spinner=False)
 def get_box_office(target_date, api_key):
-    """선택한 날짜의 일별 박스오피스 데이터를 가져옵니다."""
     params = {
         "key": api_key,
         "targetDt": target_date,
@@ -361,44 +316,32 @@ def get_box_office(target_date, api_key):
 
     response = requests.get(API_URL, params=params, timeout=15)
     response.raise_for_status()
-
     data = response.json()
 
-    # KOBIS는 오류가 발생해도 JSON으로 응답할 수 있습니다.
+    # HTTP 응답이 성공이어도 API 자체 오류일 수 있음
     if "faultInfo" in data:
         fault = data["faultInfo"]
-        message = fault.get("message", "KOBIS API에서 오류가 발생했습니다.")
+        message = fault.get("message", "KOBIS API 오류")
         raise ValueError(message)
 
     result = data.get("boxOfficeResult")
     if not result:
         raise ValueError("박스오피스 응답 데이터를 찾을 수 없습니다.")
 
-    movies = result.get("dailyBoxOfficeList", [])
-    return movies
+    return result.get("dailyBoxOfficeList", [])
 
 
 # ==========================================
-# 6. 영화 포스터 찾기
-#    위키백과에서 이미지를 찾습니다.
-#    이미지를 못 찾더라도 앱은 계속 작동합니다.
+# 6. 영화 포스터 검색
 # ==========================================
 @st.cache_data(ttl=86400, show_spinner=False)
 def get_movie_poster(movie_name):
-    """위키백과 검색 결과에서 영화 관련 썸네일을 찾습니다."""
     api_url = "https://ko.wikipedia.org/w/api.php"
-
     headers = {
-        "User-Agent": "PastelMovieDashboard/1.0 (movie information viewer)"
+        "User-Agent": "PastelMovieDashboard/1.0"
     }
 
-    # 먼저 한국어 위키백과에서 검색합니다.
-    search_queries = [
-        f"{movie_name} 영화",
-        movie_name,
-    ]
-
-    for query in search_queries:
+    for query in [f"{movie_name} 영화", movie_name]:
         try:
             params = {
                 "action": "query",
@@ -419,23 +362,21 @@ def get_movie_poster(movie_name):
                 timeout=5,
             )
             response.raise_for_status()
-            data = response.json()
 
-            pages = data.get("query", {}).get("pages", {})
+            pages = response.json().get("query", {}).get("pages", {})
             for page in pages.values():
-                thumbnail = page.get("thumbnail", {}).get("source")
-                if thumbnail:
-                    return thumbnail
+                image_url = page.get("thumbnail", {}).get("source")
+                if image_url:
+                    return image_url
 
         except Exception:
-            # 포스터 검색 실패는 전체 앱 오류로 이어지지 않습니다.
             continue
 
     return None
 
 
 # ==========================================
-# 7. API 키 확인 및 데이터 불러오기
+# 7. API 키 확인
 # ==========================================
 try:
     api_key = st.secrets["KOBIS_KEY"]
@@ -449,6 +390,9 @@ except Exception:
     st.stop()
 
 
+# ==========================================
+# 8. 선택한 날짜의 영화 목록 불러오기
+# ==========================================
 target_date = selected_date.strftime("%Y%m%d")
 
 try:
@@ -464,7 +408,7 @@ except requests.exceptions.RequestException:
     st.stop()
 
 except ValueError as error:
-    st.error(f"⚠️ 박스오피스 데이터를 가져오지 못했어요: {error}")
+    st.error(f"⚠️ 데이터를 가져오지 못했어요: {error}")
     st.stop()
 
 except Exception as error:
@@ -472,16 +416,15 @@ except Exception as error:
     st.stop()
 
 
+# 요청한 안내 문구: 목록이 비어 있으면 여기서 종료
 if not movies:
-    st.warning(
-        "🌷 선택한 날짜의 박스오피스 자료가 없어요. "
-        "다른 날짜를 선택해 주세요."
-    )
+    st.warning("📅 그날은 아직 집계 전입니다")
+    st.caption("다른 날짜를 선택해 다시 확인해 주세요.")
     st.stop()
 
 
 # ==========================================
-# 8. 데이터 정리
+# 9. 데이터 정리
 # ==========================================
 df = pd.DataFrame(movies)
 
@@ -496,10 +439,43 @@ numeric_columns = [
 
 for column in numeric_columns:
     if column in df.columns:
-        df[column] = pd.to_numeric(df[column], errors="coerce").fillna(0).astype(int)
+        df[column] = (
+            pd.to_numeric(df[column], errors="coerce")
+            .fillna(0)
+            .astype(int)
+        )
 
 df["movieNm"] = df["movieNm"].fillna("영화 제목 없음")
 df["openDt"] = df["openDt"].fillna("-")
+
+
+def number_format(value):
+    return f"{int(value):,}"
+
+
+def rank_change(value):
+    """양수는 상승(빨간 위 화살표), 음수는 하락(파란 아래 화살표)."""
+    value = int(value)
+
+    if value > 0:
+        return f"🔺 {value}"
+    if value < 0:
+        return f"🔻 {abs(value)}"
+    return "➖ 0"
+
+
+def movie_display_name(row):
+    """누적 관객 수가 100만 명을 초과하면 트로피 표시."""
+    title = str(row["movieNm"])
+    total_audience = int(row["audiAcc"])
+
+    if total_audience > 1_000_000:
+        return f"🏆 {title}"
+
+    return title
+
+
+df["표시 영화명"] = df.apply(movie_display_name, axis=1)
 
 first_movie = df.iloc[0]
 first_title = str(first_movie["movieNm"])
@@ -510,64 +486,34 @@ first_screens = int(first_movie["scrnCnt"])
 first_shows = int(first_movie["showCnt"])
 
 
-def number_format(value):
-    """숫자에 천 단위 쉼표를 붙입니다."""
-    return f"{int(value):,}"
-
-
-def rank_change(value):
-    """순위 변동을 읽기 쉬운 기호로 바꿉니다."""
-    value = int(value)
-
-    if value > 0:
-        return f"▲ {value}"
-    if value < 0:
-        return f"▼ {abs(value)}"
-    return "—"
-
-
 # ==========================================
-# 9. 대표 영화 카드
+# 10. 오늘의 주인공
 # ==========================================
-poster_url = get_movie_poster(first_title)
-
 st.markdown(
     '<div class="section-title">🌟 오늘의 주인공</div>',
     unsafe_allow_html=True,
 )
 st.markdown(
-    '<div class="section-subtitle">선택한 날짜에 가장 높은 순위를 기록한 영화예요.</div>',
+    '<div class="section-subtitle">선택한 날짜의 박스오피스 1위 영화예요.</div>',
     unsafe_allow_html=True,
 )
 
 poster_col, hero_col = st.columns([0.85, 2.15], gap="large")
+poster_url = get_movie_poster(first_title)
 
 with poster_col:
     if poster_url:
         try:
             st.image(poster_url, use_container_width=True)
         except Exception:
-            st.markdown(
-                """
-                <div style="
-                    background:linear-gradient(145deg,#E6DEFF,#FCE4F0);
-                    border-radius:22px;
-                    min-height:300px;
-                    display:flex;
-                    align-items:center;
-                    justify-content:center;
-                    font-size:72px;
-                ">🎬</div>
-                """,
-                unsafe_allow_html=True,
-            )
+            st.markdown("## 🎬")
     else:
         st.markdown(
             """
             <div style="
                 background:linear-gradient(145deg,#E6DEFF,#FCE4F0,#DDF1FF);
                 border-radius:22px;
-                min-height:300px;
+                min-height:260px;
                 display:flex;
                 align-items:center;
                 justify-content:center;
@@ -577,18 +523,19 @@ with poster_col:
             """,
             unsafe_allow_html=True,
         )
-
-    st.caption("포스터 이미지는 검색 결과에 따라 표시되지 않을 수 있어요.")
+    st.caption("포스터는 검색 결과에 따라 표시되지 않을 수 있어요.")
 
 with hero_col:
     safe_title = html.escape(first_title)
     safe_open_date = html.escape(str(first_movie["openDt"]))
 
+    trophy = " 🏆" if first_total > 1_000_000 else ""
+
     st.markdown(
         f"""
         <div class="hero-card">
             <div class="hero-label">🏆 NO. {first_rank} · DAILY BEST</div>
-            <div class="hero-title">{safe_title}</div>
+            <div class="hero-title">{safe_title}{trophy}</div>
             <div class="hero-meta">
                 🎬 개봉일 &nbsp; {safe_open_date}<br>
                 🗓️ 조회일 &nbsp; {selected_date.strftime("%Y년 %m월 %d일")}
@@ -632,22 +579,20 @@ with hero_col:
 
 
 # ==========================================
-# 10. TOP 5 관객 수 그래프
+# 11. TOP 5 관객 수 그래프
 # ==========================================
 st.markdown(
     '<div class="section-title">📊 관객들이 사랑한 TOP 5</div>',
     unsafe_allow_html=True,
 )
 st.markdown(
-    '<div class="section-subtitle">선택한 날짜의 영화별 관객 수를 비교해 보세요.</div>',
+    '<div class="section-subtitle">영화별 관객 수를 비교해 보세요.</div>',
     unsafe_allow_html=True,
 )
 
 top5 = df.head(5).copy()
 top5["관객 수"] = top5["audiCnt"]
-top5["영화"] = top5["movieNm"]
-
-# 순위 1위가 위에 오도록 순서를 뒤집습니다.
+top5["영화"] = top5["표시 영화명"]
 top5 = top5.iloc[::-1]
 
 fig = px.bar(
@@ -664,7 +609,6 @@ fig = px.bar(
         "#B8A8F0",
         "#8C7BE8",
     ],
-    custom_data=["rank"],
 )
 
 fig.update_traces(
@@ -680,7 +624,11 @@ fig.update_layout(
     margin=dict(l=10, r=70, t=15, b=10),
     paper_bgcolor="rgba(255,255,255,0)",
     plot_bgcolor="rgba(255,255,255,0)",
-    font=dict(family="Gowun Dodum, sans-serif", color="#625977", size=12),
+    font=dict(
+        family="Gowun Dodum, sans-serif",
+        color="#625977",
+        size=12,
+    ),
     showlegend=False,
     coloraxis_showscale=False,
     xaxis=dict(
@@ -697,23 +645,23 @@ fig.update_layout(
     ),
 )
 
-st.markdown(
-    '<div class="soft-card">',
-    unsafe_allow_html=True,
-)
 st.plotly_chart(fig, use_container_width=True)
-st.markdown("</div>", unsafe_allow_html=True)
 
 
 # ==========================================
-# 11. 전체 박스오피스 순위표
+# 12. 전체 영화 순위표
 # ==========================================
 st.markdown(
-    '<div class="section-title">🎞️ 오늘의 영화 순위</div>',
+    '<div class="section-title">🎞️ 영화 순위</div>',
     unsafe_allow_html=True,
 )
 st.markdown(
-    '<div class="section-subtitle">영화 제목을 검색하고 순위와 관객 수를 확인해 보세요.</div>',
+    """
+    <div class="section-subtitle">
+        🔺 순위 상승 &nbsp; 🔻 순위 하락 &nbsp; ➖ 변동 없음
+        &nbsp; 🏆 누적 관객 100만 명 초과
+    </div>
+    """,
     unsafe_allow_html=True,
 )
 
@@ -738,8 +686,8 @@ if display_df.empty:
 else:
     table_df = pd.DataFrame({
         "순위": display_df["rank"].map(lambda x: f"{x}위"),
-        "변동": display_df["rankInten"].map(rank_change),
-        "영화 제목": display_df["movieNm"],
+        "순위 변동": display_df["rankInten"].map(rank_change),
+        "영화 제목": display_df["표시 영화명"],
         "개봉일": display_df["openDt"],
         "관객 수": display_df["audiCnt"].map(lambda x: f"{x:,}명"),
         "누적 관객 수": display_df["audiAcc"].map(lambda x: f"{x:,}명"),
@@ -754,7 +702,7 @@ else:
 
 
 # ==========================================
-# 12. 하단 안내
+# 13. 하단 안내
 # ==========================================
 st.markdown(
     f"""
@@ -763,7 +711,7 @@ st.markdown(
         데이터 출처: 영화진흥위원회(KOBIS) 일별 박스오피스 API<br>
         조회 기준일: {selected_date.strftime("%Y-%m-%d")}<br>
         <span style="font-size:11px;">
-            포스터는 위키백과 검색 결과를 활용하며, 일부 영화는 이미지가 표시되지 않을 수 있습니다.
+            🏆 표시는 누적 관객 수가 100만 명을 초과한 영화에 붙어요.
         </span>
     </div>
     """,
